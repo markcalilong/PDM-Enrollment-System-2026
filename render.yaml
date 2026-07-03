@@ -1,0 +1,21 @@
+# Render Blueprint — single web service that runs the Express API and also
+# serves the built React SPA (same-origin /api and /uploads).
+# Database is hosted separately on Neon; set DATABASE_URL below.
+services:
+  - type: web
+    name: pdm-enrollment
+    runtime: node
+    plan: free
+    # Installs both workspaces, builds the React client, then runs DB migrations.
+    buildCommand: npm install && npm run build && npm run migrate
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # paste your Neon pooled connection string in the dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 7d

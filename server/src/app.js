@@ -30,6 +30,18 @@ app.get("/api/health", (_req, res) => {
   res.json({ success: true, message: "Server is running" });
 });
 
+// In production, serve the built React SPA from the same service so the
+// frontend's relative /api and /uploads calls are same-origin.
+if (env.nodeEnv === "production") {
+  const clientDist = path.resolve(__dirname, "../../client/dist");
+  app.use(express.static(clientDist));
+
+  // SPA fallback: any non-API route returns index.html for client routing.
+  app.get(/^(?!\/api).*/, (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
+  });
+}
+
 app.use(errorHandler);
 
 module.exports = app;

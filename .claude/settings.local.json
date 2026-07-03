@@ -94,7 +94,13 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code} %{content_type}\\\\n\" http://localhost:3000/uploads/officials/official-1783043663509.png)",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\);j.data.forEach\\(s=>{console.log\\('\\\\n=== '+s.name+' \\('+\\(s.description||''\\)+'\\) — '+s.officials.length+' members ==='\\);s.officials.forEach\\(o=>console.log\\('  '+o.name+' | '+o.position\\)\\);}\\);}\\)\")",
       "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\).data;console.log\\('VISION:',j.vision\\);console.log\\('\\\\nMISSION:',j.mission\\);}\\)\")",
-      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\).data;console.log\\(j.length+' offerings'\\);j.forEach\\(o=>console.log\\('  ['+o.course_code+'] '+o.course_name+' | '+o.degree_type+' | feat='+o.is_featured\\)\\);}\\)\")"
+      "Bash(node -e \"let d='';process.stdin.on\\('data',c=>d+=c\\).on\\('end',\\(\\)=>{const j=JSON.parse\\(d\\).data;console.log\\(j.length+' offerings'\\);j.forEach\\(o=>console.log\\('  ['+o.course_code+'] '+o.course_name+' | '+o.degree_type+' | feat='+o.is_featured\\)\\);}\\)\")",
+      "Bash(ls node_modules/.bin/tsc*)",
+      "Bash(ls client/node_modules/.bin/tsc*)",
+      "Bash(ls node_modules/typescript/package.json client/node_modules/typescript/package.json)",
+      "Bash(ls client/node_modules/.bin/vite* node_modules/.bin/vite*)",
+      "Bash(npm install *)",
+      "Bash(npx tsc *)"
     ]
   }
 }
