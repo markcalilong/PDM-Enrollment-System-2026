@@ -119,7 +119,11 @@
       "Bash('/c/Program Files/PostgreSQL/18/bin/psql.exe' 'postgresql://neondb_owner:npg_a75zcylLKdOj@ep-green-thunder-ao6r29x5-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require' -tA -c ' *)",
       "Bash('/c/Program Files/PostgreSQL/18/bin/psql.exe' 'postgresql://neondb_owner:npg_a75zcylLKdOj@ep-green-thunder-ao6r29x5-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require' -tA -c 'select table_schema, count\\(*\\) from information_schema.tables where table_type='\\\\''BASE TABLE'\\\\'' and table_schema not in \\('\\\\''pg_catalog'\\\\'','\\\\''information_schema'\\\\''\\) group by table_schema;')",
       "Bash(DATABASE_URL= npx knex migrate:latest)",
-      "Bash(DATABASE_URL='' node -e ' *)"
+      "Bash(DATABASE_URL='' node -e ' *)",
+      "Bash(curl -s -m 60 -w '\\\\n[HTTP %{http_code}]\\\\n' https://pdm-enrollment-api.onrender.com/api/health)",
+      "Bash(curl -s -m 60 -w '\\\\n[HTTP %{http_code}]\\\\n' https://pdm-enrollment-api.onrender.com/api/landing/institution)",
+      "Bash(curl -s -m 60 https://pdm-enrollment-web.onrender.com/)",
+      "Bash(curl -s -m 60 -D - -o /dev/null -H 'Origin: https://pdm-enrollment-web.onrender.com' https://pdm-enrollment-api.onrender.com/api/landing/institution)"
     ]
   }
 }

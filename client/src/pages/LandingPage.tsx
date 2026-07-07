@@ -22,8 +22,7 @@ import {
 } from "react-icons/hi2";
 import type { Announcement, Highlight, CourseOffering, InstitutionSettings, HeroSlide, Faq } from "@shared/types";
 import { applyThemeToDOM } from "../hooks/useTheme";
-
-const BASE_URL = "/api";
+import { API_BASE as BASE_URL } from "../services/apiBase";
 
 async function publicFetch<T>(endpoint: string): Promise<T[]> {
   const res = await fetch(`${BASE_URL}/landing${endpoint}`);

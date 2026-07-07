@@ -7,8 +7,7 @@ import {
 } from "react-icons/hi2";
 import type { Announcement, InstitutionSettings } from "@shared/types";
 import { applyThemeToDOM } from "../hooks/useTheme";
-
-const BASE_URL = "/api";
+import { API_BASE as BASE_URL } from "../services/apiBase";
 
 const CATEGORY_LABELS: Record<string, string> = {
   general: "General",

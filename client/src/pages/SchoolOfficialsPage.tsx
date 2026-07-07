@@ -8,8 +8,7 @@ import {
 } from "react-icons/hi2";
 import type { InstitutionSettings, OfficialSection } from "@shared/types";
 import { applyThemeToDOM } from "../hooks/useTheme";
-
-const BASE_URL = "/api";
+import { API_BASE as BASE_URL } from "../services/apiBase";
 
 export function SchoolOfficialsPage() {
   const [sections, setSections] = useState<OfficialSection[]>([]);

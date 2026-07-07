@@ -1,4 +1,5 @@
 import { api } from "./api";
+import { API_BASE } from "./apiBase";
 
 function createMaintenanceService<T>(endpoint: string) {
   const base = `/maintenance/${endpoint}`;
@@ -46,7 +47,7 @@ export const tuitionRateService = createMaintenanceService("tuition-rates");
 
 async function scheduleRequest<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const token = localStorage.getItem("token");
-  const res = await fetch(`/api${endpoint}`, {
+  const res = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -146,7 +147,7 @@ export const heroSlideService = {
   getAll: () => api.get<any[]>("/landing/admin/hero-slides"),
   create: async (formData: FormData) => {
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/landing/admin/hero-slides", {
+    const res = await fetch(`${API_BASE}/landing/admin/hero-slides`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -157,7 +158,7 @@ export const heroSlideService = {
   },
   update: async (id: number, formData: FormData) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`/api/landing/admin/hero-slides/${id}`, {
+    const res = await fetch(`${API_BASE}/landing/admin/hero-slides/${id}`, {
       method: "PUT",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -174,7 +175,7 @@ export const announcementService = {
   getById: (id: number) => api.get<any>(`/landing/admin/announcements/${id}`),
   create: async (formData: FormData) => {
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/landing/admin/announcements", {
+    const res = await fetch(`${API_BASE}/landing/admin/announcements`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -185,7 +186,7 @@ export const announcementService = {
   },
   update: async (id: number, formData: FormData) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`/api/landing/admin/announcements/${id}`, {
+    const res = await fetch(`${API_BASE}/landing/admin/announcements/${id}`, {
       method: "PUT",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -223,7 +224,7 @@ export const officialSectionService = {
 export const officialService = {
   create: async (formData: FormData) => {
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/landing/admin/officials", {
+    const res = await fetch(`${API_BASE}/landing/admin/officials`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -234,7 +235,7 @@ export const officialService = {
   },
   update: async (id: number, formData: FormData) => {
     const token = localStorage.getItem("token");
-    const res = await fetch(`/api/landing/admin/officials/${id}`, {
+    const res = await fetch(`${API_BASE}/landing/admin/officials/${id}`, {
       method: "PUT",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -262,7 +263,7 @@ export const institutionService = {
     const formData = new FormData();
     formData.append("logo", file);
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/institution/logo", {
+    const res = await fetch(`${API_BASE}/institution/logo`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
@@ -273,7 +274,7 @@ export const institutionService = {
     const formData = new FormData();
     formData.append("banner", file);
     const token = localStorage.getItem("token");
-    const res = await fetch("/api/institution/banner", {
+    const res = await fetch(`${API_BASE}/institution/banner`, {
       method: "POST",
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,

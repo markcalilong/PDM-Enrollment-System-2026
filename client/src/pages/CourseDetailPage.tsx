@@ -11,8 +11,7 @@ import {
 } from "react-icons/hi2";
 import type { InstitutionSettings } from "@shared/types";
 import { applyThemeToDOM } from "../hooks/useTheme";
-
-const BASE_URL = "/api";
+import { API_BASE as BASE_URL } from "../services/apiBase";
 
 interface CurriculumSubject {
   year_level: number;
