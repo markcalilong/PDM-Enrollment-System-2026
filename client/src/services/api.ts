@@ -1,6 +1,10 @@
 import type { ApiResponse } from "@shared/types";
 
-const BASE_URL = "/api";
+// In dev, VITE_API_URL is unset → "/api" is proxied by Vite to the backend.
+// In production (two-service deploy), set VITE_API_URL to the backend's URL,
+// e.g. "https://pdm-enrollment-api.onrender.com".
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? "").replace(/\/$/, "");
+const BASE_URL = `${API_ORIGIN}/api`;
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<ApiResponse<T>> {
   const token = localStorage.getItem("token");

@@ -1,21 +1,51 @@
-# Render Blueprint — single web service that runs the Express API and also
-# serves the built React SPA (same-origin /api and /uploads).
-# Database is hosted separately on Neon; set DATABASE_URL below.
+# Render Blueprint — two services:
+#   1) pdm-enrollment-api   → Node web service (Express API only)
+#   2) pdm-enrollment-web   → Static site (built React SPA on Render's CDN)
+# Database is hosted on Neon; images on Cloudinary. Secrets are set in the
+# Render dashboard (sync: false), never committed here.
+#
+# ── Post-create wiring (two values that reference each other) ──
+#   • pdm-enrollment-web : VITE_API_URL = https://<api-service>.onrender.com
+#   • pdm-enrollment-api : CLIENT_URL   = https://<web-service>.onrender.com
+#   Set the API's DATABASE_URL/CLOUDINARY_URL first, deploy it to learn its URL,
+#   then set the web's VITE_API_URL and deploy the web, then set the API's
+#   CLIENT_URL to the web URL and redeploy the API.
+
 services:
+  # ─── Backend: Express API ───────────────────────────────
   - type: web
-    name: pdm-enrollment
+    name: pdm-enrollment-api
     runtime: node
     plan: free
-    # Installs both workspaces, builds the React client, then runs DB migrations.
-    buildCommand: npm install && npm run build && npm run migrate
+    region: singapore # closest to the Neon ap-southeast-1 database
+    buildCommand: npm install && npm run migrate
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
       - key: DATABASE_URL
-        sync: false # paste your Neon pooled connection string in the dashboard
+        sync: false # Neon pooled connection string
+      - key: CLOUDINARY_URL
+        sync: false # cloudinary://<key>:<secret>@<cloud_name>
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_EXPIRES_IN
         value: 7d
+      - key: CLIENT_URL
+        sync: false # https://<web-service>.onrender.com (set after web deploys)
+
+  # ─── Frontend: static React SPA ─────────────────────────
+  - type: web
+    name: pdm-enrollment-web
+    runtime: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./client/dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false # https://<api-service>.onrender.com (set after API deploys)
+    routes:
+      # SPA fallback so client-side routes (/programs/:id, etc.) resolve.
+      - type: rewrite
+        source: /*
+        destination: /index.html

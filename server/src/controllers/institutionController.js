@@ -1,6 +1,5 @@
-const path = require("path");
-const fs = require("fs");
 const { institutionModel } = require("../models/institutionModel");
+const { uploadBuffer, destroyByUrl } = require("../config/cloudinary");
 
 const institutionController = {
   async get(_req, res, next) {
@@ -23,8 +22,10 @@ const institutionController = {
         res.status(400).json({ success: false, message: "No file uploaded" });
         return;
       }
-      const logoPath = `/uploads/${req.file.filename}`;
-      const settings = await institutionModel.update({ logo_path: logoPath });
+      const current = await institutionModel.get();
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/institution");
+      const settings = await institutionModel.update({ logo_path: secure_url });
+      await destroyByUrl(current?.logo_path);
       res.json({ success: true, data: settings });
     } catch (err) { next(err); }
   },
@@ -36,12 +37,9 @@ const institutionController = {
         return;
       }
       const current = await institutionModel.get();
-      if (current?.banner_path) {
-        const oldPath = path.resolve(__dirname, "../../..", current.banner_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      const bannerPath = `/uploads/${req.file.filename}`;
-      const settings = await institutionModel.update({ banner_path: bannerPath });
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/institution");
+      const settings = await institutionModel.update({ banner_path: secure_url });
+      await destroyByUrl(current?.banner_path);
       res.json({ success: true, data: settings });
     } catch (err) { next(err); }
   },
@@ -49,11 +47,8 @@ const institutionController = {
   async removeBanner(_req, res, next) {
     try {
       const current = await institutionModel.get();
-      if (current?.banner_path) {
-        const oldPath = path.resolve(__dirname, "../../..", current.banner_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
       const settings = await institutionModel.update({ banner_path: null });
+      await destroyByUrl(current?.banner_path);
       res.json({ success: true, data: settings });
     } catch (err) { next(err); }
   },

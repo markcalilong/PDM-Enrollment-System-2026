@@ -1,7 +1,7 @@
 const { Router } = require("express");
 const multer = require("multer");
 const path = require("path");
-const fs = require("fs");
+const { uploadBuffer, destroyByUrl } = require("../config/cloudinary");
 const { validate } = require("../middleware/validate");
 const { schemas } = require("./validations");
 const { authenticate, authorize } = require("../middleware/auth");
@@ -18,17 +18,12 @@ const {
 
 const router = Router();
 
-// ─── Multer for slide images ────────────────────────────
-const storage = multer.diskStorage({
-  destination: path.resolve(__dirname, "../../../uploads/slides"),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `slide-${Date.now()}${ext}`);
-  },
-});
-
-const upload = multer({
-  storage,
+// ─── Image uploads → Cloudinary (in-memory buffer, no local disk) ──
+// A single memory-storage multer serves slides, announcements, and officials;
+// each handler picks the Cloudinary folder. Kept as distinct names below to
+// minimise churn in the route definitions.
+const imageUpload = multer({
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = [".png", ".jpg", ".jpeg", ".webp"];
@@ -36,58 +31,9 @@ const upload = multer({
     cb(null, allowed.includes(ext));
   },
 });
-
-// ─── Multer for announcement images ────────────────────
-const annStorage = multer.diskStorage({
-  destination: path.resolve(__dirname, "../../../uploads/announcements"),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `ann-${Date.now()}${ext}`);
-  },
-});
-
-const annUpload = multer({
-  storage: annStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const allowed = [".png", ".jpg", ".jpeg", ".webp"];
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, allowed.includes(ext));
-  },
-});
-
-// ─── Multer for official images ────────────────────────
-const offStorage = multer.diskStorage({
-  destination: path.resolve(__dirname, "../../../uploads/officials"),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `official-${Date.now()}${ext}`);
-  },
-});
-
-const offUpload = multer({
-  storage: offStorage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (_req, file, cb) => {
-    const allowed = [".png", ".jpg", ".jpeg", ".webp"];
-    const ext = path.extname(file.originalname).toLowerCase();
-    cb(null, allowed.includes(ext));
-  },
-});
-
-// Ensure upload directories exist
-const slidesDir = path.resolve(__dirname, "../../../uploads/slides");
-if (!fs.existsSync(slidesDir)) {
-  fs.mkdirSync(slidesDir, { recursive: true });
-}
-const annDir = path.resolve(__dirname, "../../../uploads/announcements");
-if (!fs.existsSync(annDir)) {
-  fs.mkdirSync(annDir, { recursive: true });
-}
-const offDir = path.resolve(__dirname, "../../../uploads/officials");
-if (!fs.existsSync(offDir)) {
-  fs.mkdirSync(offDir, { recursive: true });
-}
+const upload = imageUpload;
+const annUpload = imageUpload;
+const offUpload = imageUpload;
 
 // ─── Public endpoints (no auth) ─────────────────────────
 router.get("/hero-slides", async (_req, res, next) => {
@@ -181,10 +127,11 @@ hsRouter.post("/", upload.single("image"), async (req, res, next) => {
       res.status(400).json({ success: false, message: "Image is required" });
       return;
     }
+    const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/slides");
     const data = {
       title: req.body.title,
       subtitle: req.body.subtitle || null,
-      image_path: `/uploads/slides/${req.file.filename}`,
+      image_path: secure_url,
       button_text: req.body.button_text || null,
       button_link: req.body.button_link || null,
       sort_order: Number(req.body.sort_order) || 0,
@@ -205,13 +152,10 @@ hsRouter.put("/:id", upload.single("image"), async (req, res, next) => {
       is_active: req.body.is_active === "true" || req.body.is_active === true,
     };
     if (req.file) {
-      // Delete old image
       const existing = await heroSlideModel.findById(Number(req.params.id));
-      if (existing?.image_path) {
-        const oldPath = path.resolve(__dirname, "../../..", existing.image_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      data.image_path = `/uploads/slides/${req.file.filename}`;
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/slides");
+      data.image_path = secure_url;
+      await destroyByUrl(existing?.image_path);
     }
     const row = await heroSlideModel.update(Number(req.params.id), data);
     if (!row) { res.status(404).json({ success: false, message: "Not found" }); return; }
@@ -222,12 +166,8 @@ hsRouter.delete("/:id", async (req, res, next) => {
   try {
     const existing = await heroSlideModel.findById(Number(req.params.id));
     if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
-    // Delete image file
-    if (existing.image_path) {
-      const imgPath = path.resolve(__dirname, "../../..", existing.image_path);
-      if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-    }
     await heroSlideModel.delete(Number(req.params.id));
+    await destroyByUrl(existing.image_path);
     res.json({ success: true, message: "Deleted" });
   } catch (err) { next(err); }
 });
@@ -257,7 +197,10 @@ annRouter.post("/", annUpload.single("image"), async (req, res, next) => {
       is_pinned: req.body.is_pinned === "true" || req.body.is_pinned === true,
       is_active: req.body.is_active === "true" || req.body.is_active === true,
     };
-    if (req.file) data.image_path = `/uploads/announcements/${req.file.filename}`;
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/announcements");
+      data.image_path = secure_url;
+    }
     const row = await announcementModel.create(data);
     res.status(201).json({ success: true, data: row });
   } catch (err) { next(err); }
@@ -273,19 +216,13 @@ annRouter.put("/:id", annUpload.single("image"), async (req, res, next) => {
     };
     if (req.file) {
       const existing = await announcementModel.findById(Number(req.params.id));
-      if (existing?.image_path) {
-        const oldPath = path.resolve(__dirname, "../../..", existing.image_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      data.image_path = `/uploads/announcements/${req.file.filename}`;
-    }
-    if (req.body.remove_image === "true") {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/announcements");
+      data.image_path = secure_url;
+      await destroyByUrl(existing?.image_path);
+    } else if (req.body.remove_image === "true") {
       const existing = await announcementModel.findById(Number(req.params.id));
-      if (existing?.image_path) {
-        const oldPath = path.resolve(__dirname, "../../..", existing.image_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
       data.image_path = null;
+      await destroyByUrl(existing?.image_path);
     }
     const row = await announcementModel.update(Number(req.params.id), data);
     if (!row) { res.status(404).json({ success: false, message: "Not found" }); return; }
@@ -296,11 +233,8 @@ annRouter.delete("/:id", async (req, res, next) => {
   try {
     const existing = await announcementModel.findById(Number(req.params.id));
     if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
-    if (existing.image_path) {
-      const imgPath = path.resolve(__dirname, "../../..", existing.image_path);
-      if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-    }
     await announcementModel.delete(Number(req.params.id));
+    await destroyByUrl(existing.image_path);
     res.json({ success: true, message: "Deleted" });
   } catch (err) { next(err); }
 });
@@ -354,10 +288,7 @@ osRouter.delete("/:id", async (req, res, next) => {
     const count = await officialSectionModel.delete(Number(req.params.id));
     if (count === 0) { res.status(404).json({ success: false, message: "Not found" }); return; }
     for (const m of members) {
-      if (m.image_path) {
-        const imgPath = path.resolve(__dirname, "../../..", m.image_path);
-        if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-      }
+      await destroyByUrl(m.image_path);
     }
     res.json({ success: true, message: "Deleted" });
   } catch (err) { next(err); }
@@ -374,7 +305,10 @@ offRouter.post("/", offUpload.single("image"), async (req, res, next) => {
       sort_order: Number(req.body.sort_order) || 0,
       is_active: req.body.is_active === "true" || req.body.is_active === true,
     };
-    if (req.file) data.image_path = `/uploads/officials/${req.file.filename}`;
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/officials");
+      data.image_path = secure_url;
+    }
     const row = await officialModel.create(data);
     res.status(201).json({ success: true, data: row });
   } catch (err) { next(err); }
@@ -390,19 +324,13 @@ offRouter.put("/:id", offUpload.single("image"), async (req, res, next) => {
     };
     if (req.file) {
       const existing = await officialModel.findById(Number(req.params.id));
-      if (existing?.image_path) {
-        const oldPath = path.resolve(__dirname, "../../..", existing.image_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
-      data.image_path = `/uploads/officials/${req.file.filename}`;
-    }
-    if (req.body.remove_image === "true") {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/officials");
+      data.image_path = secure_url;
+      await destroyByUrl(existing?.image_path);
+    } else if (req.body.remove_image === "true") {
       const existing = await officialModel.findById(Number(req.params.id));
-      if (existing?.image_path) {
-        const oldPath = path.resolve(__dirname, "../../..", existing.image_path);
-        if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
-      }
       data.image_path = null;
+      await destroyByUrl(existing?.image_path);
     }
     const row = await officialModel.update(Number(req.params.id), data);
     if (!row) { res.status(404).json({ success: false, message: "Not found" }); return; }
@@ -413,11 +341,8 @@ offRouter.delete("/:id", async (req, res, next) => {
   try {
     const existing = await officialModel.findById(Number(req.params.id));
     if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
-    if (existing.image_path) {
-      const imgPath = path.resolve(__dirname, "../../..", existing.image_path);
-      if (fs.existsSync(imgPath)) fs.unlinkSync(imgPath);
-    }
     await officialModel.delete(Number(req.params.id));
+    await destroyByUrl(existing.image_path);
     res.json({ success: true, message: "Deleted" });
   } catch (err) { next(err); }
 });

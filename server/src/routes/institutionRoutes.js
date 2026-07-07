@@ -7,16 +7,8 @@ const { schemas } = require("./validations");
 
 const router = Router();
 
-const storage = multer.diskStorage({
-  destination: path.resolve(__dirname, "../../../uploads"),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `logo-${Date.now()}${ext}`);
-  },
-});
-
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
     const allowed = [".png", ".jpg", ".jpeg", ".svg", ".webp"];
