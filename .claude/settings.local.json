@@ -114,7 +114,12 @@
       "Bash(NODE_ENV=production node -e \"require\\('./src/config/env'\\).logEnvStatus\\(\\); console.log\\('BOOT OK'\\);\")",
       "Bash(env -u DATABASE_URL -u JWT_SECRET NODE_ENV=production node -e \"try { require\\('./src/config/env'\\).logEnvStatus\\(\\); console.log\\('BOOT OK'\\); } catch\\(e\\){ console.error\\('BLOCKED:', e.message\\); }\")",
       "Bash(NODE_ENV=production DATABASE_URL= JWT_SECRET=change-me node -e \"try { require\\('./src/config/env'\\).logEnvStatus\\(\\); console.log\\('BOOT OK \\(unexpected\\)'\\); } catch\\(e\\){ console.error\\('BLOCKED:', e.message\\); process.exit\\(1\\); }\")",
-      "Bash(VITE_API_URL='https://pdm-enrollment-api.onrender.com' npx vite build)"
+      "Bash(VITE_API_URL='https://pdm-enrollment-api.onrender.com' npx vite build)",
+      "Read(//c/Program Files/PostgreSQL/**)",
+      "Bash('/c/Program Files/PostgreSQL/18/bin/psql.exe' 'postgresql://neondb_owner:npg_a75zcylLKdOj@ep-green-thunder-ao6r29x5-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require' -tA -c ' *)",
+      "Bash('/c/Program Files/PostgreSQL/18/bin/psql.exe' 'postgresql://neondb_owner:npg_a75zcylLKdOj@ep-green-thunder-ao6r29x5-pooler.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require' -tA -c 'select table_schema, count\\(*\\) from information_schema.tables where table_type='\\\\''BASE TABLE'\\\\'' and table_schema not in \\('\\\\''pg_catalog'\\\\'','\\\\''information_schema'\\\\''\\) group by table_schema;')",
+      "Bash(DATABASE_URL= npx knex migrate:latest)",
+      "Bash(DATABASE_URL='' node -e ' *)"
     ]
   }
 }

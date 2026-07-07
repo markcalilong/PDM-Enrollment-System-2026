@@ -19,6 +19,9 @@ const connection = env.databaseUrl
 const db = knex({
   client: "pg",
   connection,
+  // Pin the schema so unqualified table names always resolve, independent of
+  // the server's default search_path (Neon can leave it empty).
+  searchPath: ["public"],
   pool: { min: 2, max: 10 },
 });
 
