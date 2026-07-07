@@ -62,7 +62,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 // ─── Hero Banner ────────────────────────────────────────
 function HeroBanner({ institutionName, logoPath, bannerPath }: { institutionName: string; logoPath: string | null; bannerPath: string | null }) {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-primary-900 via-primary-800 to-primary-600 text-white min-h-[550px] sm:min-h-[600px] flex items-center">
+    <section className="relative overflow-hidden bg-gradient-to-br from-primary-900 via-primary-800 to-primary-600 text-white min-h-[420px] sm:min-h-[480px] flex items-center">
       {/* Banner image or animated gradient background */}
       {bannerPath ? (
         <>
@@ -82,12 +82,12 @@ function HeroBanner({ institutionName, logoPath, bannerPath }: { institutionName
         </div>
       )}
 
-      <div className="relative mx-auto w-full max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8 lg:py-36">
+      <div className="relative mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
         <div className="text-center max-w-3xl mx-auto">
           {logoPath && (
-            <img src={logoPath} alt="" className="mx-auto mb-8 h-24 w-24 rounded-2xl bg-white/10 p-2.5 object-contain backdrop-blur-sm ring-1 ring-white/20" />
+            <img src={logoPath} alt="" className="mx-auto mb-5 h-20 w-20 rounded-2xl bg-white/10 p-2.5 object-contain backdrop-blur-sm ring-1 ring-white/20" />
           )}
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm mb-8 ring-1 ring-white/20">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-sm font-medium text-white/90 backdrop-blur-sm mb-5 ring-1 ring-white/20">
             <HiOutlineAcademicCap className="h-4 w-4" />
             Now accepting enrollees
           </div>
@@ -97,10 +97,10 @@ function HeroBanner({ institutionName, logoPath, bannerPath }: { institutionName
               {institutionName}
             </span>
           </h1>
-          <p className="mt-6 text-lg text-white/80 sm:text-xl leading-relaxed max-w-2xl mx-auto drop-shadow">
+          <p className="mt-5 text-lg text-white/80 sm:text-xl leading-relaxed max-w-2xl mx-auto drop-shadow">
             Empowering students with quality education and opportunities for growth. Start your academic journey with us today.
           </p>
-          <div className="mt-10 flex flex-wrap justify-center gap-4">
+          <div className="mt-8 flex flex-wrap justify-center gap-4">
             <Link
               to="/register"
               className="group inline-flex items-center gap-2 rounded-xl bg-white px-8 py-3.5 text-sm font-bold text-primary-700 shadow-lg shadow-black/20 hover:bg-primary-50 hover:shadow-xl transition-all"

@@ -11,11 +11,12 @@ A web-based school enrollment, fee management, and public-facing website built f
 | **Frontend**   | React 19, TypeScript, Vite 6, Tailwind CSS 3, React Router 7, React Hook Form 7, React Icons (Heroicons) |
 | **Typography** | Google Fonts — Inter (body, `font-sans`) + Poppins (headings, `font-display`) |
 | **Backend**    | Node.js, Express 4, Knex 3 (query builder)                                |
-| **Database**   | PostgreSQL                                                                 |
+| **Database**   | PostgreSQL — local in dev, **Neon** (managed, SSL) in production           |
 | **Auth**       | JWT (jsonwebtoken), bcrypt                                                 |
 | **Security**   | Helmet, CORS, express-rate-limit                                           |
 | **Validation** | Joi (server-side)                                                          |
-| **File Upload**| Multer (institution logo, banner, announcement images)                     |
+| **File Upload**| Multer (memory storage) → **Cloudinary** (logo, banner, slides, announcements, officials) |
+| **Hosting**    | **Render** — two services: `pdm-enrollment-api` (Express Web Service) + `pdm-enrollment-web` (static SPA) |
 | **Shared**     | `shared/types/index.ts` — TypeScript interfaces shared between client and server |
 
 ---
@@ -23,7 +24,7 @@ A web-based school enrollment, fee management, and public-facing website built f
 ## Architecture
 
 - **Monorepo** with `client/`, `server/`, `shared/`, and `migrations/` at root
-- **Database migrations** via Knex (27 migration files)
+- **Database migrations** via Knex (33 migration files)
 - **RESTful API** at `/api` with grouped routes: `/auth`, `/maintenance`, `/transactions`, `/institution`, `/users`, `/landing` (public + admin)
 - **Public website** at `/` with detail pages for programs and announcements
 - **Reusable UI components**: `Button`, `Input`, `Modal`, `DataTable`, `PageHeader`, `SearchSelect`, `Sidebar`
@@ -143,7 +144,7 @@ PDM Enrollment System 2026/
 
 ## Database Tables
 
-Created via Knex migration files in `migrations/` (26 migrations):
+Created via Knex migration files in `migrations/` (33 migrations):
 
 | Table                    | Description                                          |
 | ------------------------ | ---------------------------------------------------- |
@@ -261,6 +262,26 @@ Down-payment percentages (X%) are configurable per school year in the Tuition Ra
 
 ---
 
+## Deployment (Production)
+
+Live on **Render** with **Neon** Postgres and **Cloudinary** images (set up July 7, 2026).
+
+| Piece | Value |
+| ----- | ----- |
+| Frontend (static SPA) | `pdm-enrollment-web` → https://pdm-enrollment-web.onrender.com |
+| Backend (API only) | `pdm-enrollment-api` → https://pdm-enrollment-api.onrender.com |
+| Database | Neon Postgres (`neondb`, ap-southeast-1) |
+| Images | Cloudinary (folders `pdm/institution|slides|announcements|officials`) |
+| Config | `render.yaml` blueprint (two services); deploys from GitHub `master` |
+
+**Env vars** — API: `NODE_ENV=production`, `DATABASE_URL` (Neon pooled, `?sslmode=require`), `CLOUDINARY_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN`, `CLIENT_URL` (web URL for CORS). Web: `VITE_API_URL` (bare API origin — **baked at build time**, rebuild web after changing).
+
+**Key connection points**
+- Frontend API base is centralized in `client/src/services/apiBase.ts` (`API_BASE` from `VITE_API_URL`). Dev leaves it unset → `/api` via Vite proxy. **Never hardcode `/api`** in client code.
+- DB switches to `DATABASE_URL` + SSL when set; `searchPath: ["public"]` is pinned in `knexfile.js` + `database.js` (Neon can leave the default search_path empty).
+- `env.js` prints a masked env monitor on boot and refuses to start in production if `DATABASE_URL`/`JWT_SECRET` are missing/default.
+- **Do NOT run `npm run seed` on Render** — seeds `.del()` first and wipe data. The build runs migrations only.
+
 ## Running the System
 
 ```bash
@@ -280,11 +301,16 @@ cd server && node src/server.js    # Backend on http://localhost:3000
 cd client && npm run dev           # Frontend on http://localhost:5173
 ```
 
-### Default Admin
+### Accounts (default dev passwords `<role>123`)
 
-- **Email:** `admin@pdm.edu`
-- **Password:** `admin123`
-- **Roles:** `admin`, `registrar`, `staff`, `student`
+| Email | Role | Password |
+| ----- | ---- | -------- |
+| `superadmin@pdm.edu` | super_admin | superadmin123 |
+| `admin@pdm.edu` | admin | admin123 |
+| `cashier@pdm.edu` | cashier | cashier123 |
+| `registrar@pdm.edu` | registrar | registrar123 |
+
+- Roles allowed: `admin`, `registrar`, `staff`, `student`, `super_admin`, `cashier` (migration `20260707000001`). `super_admin`/`cashier` are **stored roles only — no special permissions wired yet** (RBAC deferred). The register API's Joi validator still only allows `student/staff/registrar/admin`.
 
 ### Important Notes
 
@@ -293,8 +319,8 @@ cd client && npm run dev           # Frontend on http://localhost:5173
 - PostgreSQL returns decimal/numeric columns as strings — always use `Number()` for arithmetic
 - API responses must use format `{ success: true, data: ... }` — frontend `api.get()` reads `res.data`
 - Students table uses `sex` column (not `gender`)
-- File uploads stored in `uploads/` subdirectories (logo at `uploads/`, `uploads/slides/`, `uploads/announcements/`)
-- Old uploaded files are cleaned up on update/delete
+- **File uploads go to Cloudinary** (multer `memoryStorage` → `server/src/config/cloudinary.js`); the returned `secure_url` is stored in the existing `image_path`/`logo_path`/`banner_path` columns and rendered directly by the frontend. Old assets are best-effort deleted via `destroyByUrl()` on replace/delete
+- **Frontend API base is centralized** in `client/src/services/apiBase.ts` — never hardcode `/api`; production URL comes from `VITE_API_URL` (baked at build time)
 - Landing page is themeable — `applyThemeToDOM()` maps the institution primary color to `--color-primary-*`; never hardcode brand colors in landing/UI components
 
 ---
@@ -333,7 +359,16 @@ cd client && npm run dev           # Frontend on http://localhost:5173
 - Removed hardcoded "PDM College" fallbacks so the school name is fully driven by Institution Settings (actual name: "Pambayang Dalubhasaan ng Marilao")
 - Seeded appropriate royalty-free showcase images into `uploads/slides/`
 
+### Phase 5 — Production Deployment (July 7, 2026)
+- **Neon** Postgres (SSL via `DATABASE_URL`, `searchPath` pinned to `public`); migrated all local data → Neon via full `pg_dump`/`psql` restore
+- **Cloudinary** for all image uploads (multer memory storage → `secure_url` in existing columns)
+- **Render** two-service deploy: Express API (`pdm-enrollment-api`) + static SPA (`pdm-enrollment-web`), wired by `VITE_API_URL`/`CLIENT_URL`; `render.yaml` blueprint
+- Centralized client API base (`apiBase.ts`) — fixed public pages that hardcoded `/api` and broke on the static host
+- Env monitor in `env.js` (masked startup report, prod fail-fast); staff role accounts (super_admin, admin, cashier, registrar) via migration `20260707000001`
+- Hero banner trimmed so CTA buttons sit above the fold
+
 ### Pending — Future Phases
+- **RBAC** — wire real permissions for `super_admin`/`cashier` (currently stored roles only); extend register-API validator
 - Grade Posting, Subject Crediting, Enrollment Withdrawal
 - Student Inquiry
 - Reports (COR, TOR, Grade Reports, Scholastic Record, Enrolled Students, Curriculum)

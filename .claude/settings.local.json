@@ -123,7 +123,9 @@
       "Bash(curl -s -m 60 -w '\\\\n[HTTP %{http_code}]\\\\n' https://pdm-enrollment-api.onrender.com/api/health)",
       "Bash(curl -s -m 60 -w '\\\\n[HTTP %{http_code}]\\\\n' https://pdm-enrollment-api.onrender.com/api/landing/institution)",
       "Bash(curl -s -m 60 https://pdm-enrollment-web.onrender.com/)",
-      "Bash(curl -s -m 60 -D - -o /dev/null -H 'Origin: https://pdm-enrollment-web.onrender.com' https://pdm-enrollment-api.onrender.com/api/landing/institution)"
+      "Bash(curl -s -m 60 -D - -o /dev/null -H 'Origin: https://pdm-enrollment-web.onrender.com' https://pdm-enrollment-api.onrender.com/api/landing/institution)",
+      "Bash(curl -s -m 60 https://pdm-enrollment-web.onrender.com/assets/index-CfQO8_Vo.js -o /tmp/live_bundle.js)",
+      "Bash(curl -s -m 10 http://localhost:3000/api/health)"
     ]
   }
 }
