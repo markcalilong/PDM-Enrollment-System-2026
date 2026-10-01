@@ -264,6 +264,63 @@ export interface OfficialSection {
   updated_at: string;
 }
 
+export interface SdgGoal {
+  number: number;
+  title: string;
+  tagline: string;
+  color: string;
+  description: string | null;
+  initiative_count?: number;
+  program_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SdgInitiative {
+  id: number;
+  title: string;
+  description: string | null;
+  image_path: string | null;
+  link: string | null;
+  sort_order: number;
+  is_active: boolean;
+  sdgs: number[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExtensionActivity {
+  id: number;
+  program_id: number;
+  title: string;
+  activity_date: string | null;
+  location: string | null;
+  beneficiaries: string | null;
+  description: string | null;
+  image_path: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ExtensionProgram {
+  id: number;
+  title: string;
+  description: string | null;
+  image_path: string | null;
+  sort_order: number;
+  is_active: boolean;
+  sdgs: number[];
+  activities?: ExtensionActivity[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SdgGoalDetail extends SdgGoal {
+  initiatives: SdgInitiative[];
+  programs: ExtensionProgram[];
+}
+
 export interface CourseOffering {
   id: number;
   course_id: number;

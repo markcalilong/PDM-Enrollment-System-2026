@@ -179,6 +179,11 @@ const schemas = {
     is_active: Joi.boolean().default(true),
   }),
 
+  // SDG goal — only PDM's description is editable
+  sdgGoal: Joi.object({
+    description: Joi.string().trim().allow("", null).empty("").default(null),
+  }),
+
   // Course Offering
   courseOffering: Joi.object({
     course_id: Joi.number().integer().required(),

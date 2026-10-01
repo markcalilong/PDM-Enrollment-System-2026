@@ -6,6 +6,10 @@ import { LandingPage } from "./pages/LandingPage";
 import { CourseDetailPage } from "./pages/CourseDetailPage";
 import { AnnouncementDetailPage } from "./pages/AnnouncementDetailPage";
 import { SchoolOfficialsPage } from "./pages/SchoolOfficialsPage";
+import { ExtensionPage } from "./pages/ExtensionPage";
+import { ExtensionProgramDetailPage } from "./pages/ExtensionProgramDetailPage";
+import { SdgPage } from "./pages/SdgPage";
+import { SdgGoalPage } from "./pages/SdgGoalPage";
 import { LoginPage } from "./pages/LoginPage";
 import { RegisterPage } from "./pages/RegisterPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -17,6 +21,7 @@ import { AdvisingPage } from "./pages/transactions/AdvisingPage";
 import { AssessmentPage } from "./pages/transactions/AssessmentPage";
 import { PaymentPage } from "./pages/transactions/PaymentPage";
 import { SectioningPage } from "./pages/transactions/SectioningPage";
+import { GradePostingPage } from "./pages/transactions/GradePostingPage";
 
 // Maintenance pages
 import { InstitutionSettingsPage } from "./pages/maintenance/InstitutionSettingsPage";
@@ -38,6 +43,8 @@ import { FaqPage } from "./pages/maintenance/FaqPage";
 import { CourseOfferingPage } from "./pages/maintenance/CourseOfferingPage";
 import { HeroSlidePage } from "./pages/maintenance/HeroSlidePage";
 import { SchoolOfficialPage } from "./pages/maintenance/SchoolOfficialPage";
+import { ExtensionProgramPage } from "./pages/maintenance/ExtensionProgramPage";
+import { SdgAdminPage } from "./pages/maintenance/SdgAdminPage";
 
 export default function App() {
   return (
@@ -47,6 +54,10 @@ export default function App() {
       <Route path="/programs/:id" element={<CourseDetailPage />} />
       <Route path="/announcements/:id" element={<AnnouncementDetailPage />} />
       <Route path="/school-officials" element={<SchoolOfficialsPage />} />
+      <Route path="/extension" element={<ExtensionPage />} />
+      <Route path="/extension/:id" element={<ExtensionProgramDetailPage />} />
+      <Route path="/sdg" element={<SdgPage />} />
+      <Route path="/sdg/:number" element={<SdgGoalPage />} />
 
       {/* Auth */}
       <Route element={<AuthLayout />}>
@@ -84,7 +95,7 @@ export default function App() {
         <Route path="/transactions/assessment" element={<AssessmentPage />} />
         <Route path="/transactions/payment" element={<PaymentPage />} />
         <Route path="/transactions/sectioning" element={<SectioningPage />} />
-        <Route path="/transactions/grade-posting" element={<ComingSoonPage title="Grade Posting" subtitle="Post and manage student grades" />} />
+        <Route path="/transactions/grade-posting" element={<GradePostingPage />} />
         <Route path="/transactions/subject-crediting" element={<ComingSoonPage title="Subject Crediting" subtitle="Credit previously taken subjects" />} />
         <Route path="/transactions/enrollment-withdrawal" element={<ComingSoonPage title="Enrollment Withdrawal" subtitle="Process enrollment withdrawals" />} />
 
@@ -108,6 +119,8 @@ export default function App() {
         <Route path="/utilities/highlights" element={<HighlightPage />} />
         <Route path="/utilities/faqs" element={<FaqPage />} />
         <Route path="/utilities/school-officials" element={<SchoolOfficialPage />} />
+        <Route path="/utilities/extension" element={<ExtensionProgramPage />} />
+        <Route path="/utilities/sdg" element={<SdgAdminPage />} />
         <Route path="/utilities/course-offerings" element={<CourseOfferingPage />} />
         <Route path="/utilities/institution" element={<InstitutionSettingsPage />} />
       </Route>

@@ -4,6 +4,8 @@ const { advisingController } = require("../controllers/advisingController");
 const { assessmentController } = require("../controllers/assessmentController");
 const { paymentController } = require("../controllers/paymentController");
 const { sectioningController } = require("../controllers/sectioningController");
+const { gradeController } = require("../controllers/gradeController");
+const { authenticate } = require("../middleware/auth");
 
 const router = Router();
 
@@ -63,5 +65,17 @@ secRouter.post("/:id/add-subject", sectioningController.addSubject);
 secRouter.delete("/:id/subject/:subjectId", sectioningController.removeSubject);
 secRouter.delete("/:id", sectioningController.unenroll);
 router.use("/sectioning", secRouter);
+
+// ─── Grade Posting ──────────────────────────────────────
+const gradeRouter = Router();
+gradeRouter.use(authenticate); // capture posted_by from the JWT
+gradeRouter.get("/sections", gradeController.getSections);
+gradeRouter.get("/section/:sectionId/subjects", gradeController.getSubjectsForSection);
+gradeRouter.get("/section/:sectionId/subject/:subjectId", gradeController.getClassGrades);
+gradeRouter.get("/students", gradeController.getStudents);
+gradeRouter.get("/student/:studentId", gradeController.getStudentGrades);
+gradeRouter.post("/", gradeController.save);
+gradeRouter.patch("/:id/complete", gradeController.completeInc);
+router.use("/grades", gradeRouter);
 
 module.exports = router;

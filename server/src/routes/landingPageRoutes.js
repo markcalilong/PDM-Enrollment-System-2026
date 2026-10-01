@@ -15,6 +15,12 @@ const {
   officialModel,
   courseOfferingModel,
 } = require("../models/landingPageModel");
+const {
+  sdgGoalModel,
+  sdgInitiativeModel,
+  extensionProgramModel,
+  extensionActivityModel,
+} = require("../models/extensionSdgModel");
 
 const router = Router();
 
@@ -34,6 +40,19 @@ const imageUpload = multer({
 const upload = imageUpload;
 const annUpload = imageUpload;
 const offUpload = imageUpload;
+
+// Multipart forms send SDG tags as a JSON array string, e.g. "[4,17]".
+// Returns only valid goal numbers (1–17).
+function parseSdgs(raw) {
+  let list = raw;
+  if (typeof raw === "string") {
+    try { list = JSON.parse(raw || "[]"); } catch { list = []; }
+  }
+  if (!Array.isArray(list)) return [];
+  return list.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 17);
+}
+
+const isTrue = (v) => v === "true" || v === true;
 
 // ─── Public endpoints (no auth) ─────────────────────────
 router.get("/hero-slides", async (_req, res, next) => {
@@ -98,6 +117,47 @@ router.get("/school-officials", async (_req, res, next) => {
     const rows = await officialSectionModel.findAllWithMembers({ activeOnly: true });
     // Only surface sections that actually have members
     res.json({ success: true, data: rows.filter((s) => s.officials.length > 0) });
+  } catch (err) { next(err); }
+});
+
+router.get("/extension-programs", async (_req, res, next) => {
+  try {
+    const rows = await extensionProgramModel.findAllWithActivities({ activeOnly: true });
+    res.json({ success: true, data: rows });
+  } catch (err) { next(err); }
+});
+
+router.get("/extension-programs/:id", async (req, res, next) => {
+  try {
+    const row = await extensionProgramModel.findPublicById(Number(req.params.id));
+    if (!row) {
+      res.status(404).json({ success: false, message: "Not found" });
+      return;
+    }
+    res.json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+
+router.get("/sdg-goals", async (_req, res, next) => {
+  try {
+    const rows = await sdgGoalModel.findAllWithCounts();
+    res.json({ success: true, data: rows });
+  } catch (err) { next(err); }
+});
+
+router.get("/sdg-goals/:number", async (req, res, next) => {
+  try {
+    const number = Number(req.params.number);
+    const goal = await sdgGoalModel.findByNumber(number);
+    if (!goal) {
+      res.status(404).json({ success: false, message: "Not found" });
+      return;
+    }
+    const [initiatives, programs] = await Promise.all([
+      sdgInitiativeModel.findAllWithGoals({ activeOnly: true, sdgNumber: number }),
+      extensionProgramModel.findAllWithActivities({ activeOnly: true, sdgNumber: number }),
+    ]);
+    res.json({ success: true, data: { ...goal, initiatives, programs } });
   } catch (err) { next(err); }
 });
 
@@ -357,6 +417,201 @@ coRouter.post("/", validate(schemas.courseOffering), coCtrl.create);
 coRouter.put("/:id", validate(schemas.courseOffering), coCtrl.update);
 coRouter.delete("/:id", coCtrl.remove);
 adminRouter.use("/course-offerings", coRouter);
+
+// SDG goals admin — the 17 goals are fixed; only PDM's description is editable
+const sdgGoalRouter = Router();
+sdgGoalRouter.get("/", async (_req, res, next) => {
+  try {
+    const rows = await sdgGoalModel.findAllWithCounts();
+    res.json({ success: true, data: rows });
+  } catch (err) { next(err); }
+});
+sdgGoalRouter.put("/:number", validate(schemas.sdgGoal), async (req, res, next) => {
+  try {
+    const row = await sdgGoalModel.updateDescription(Number(req.params.number), req.body.description);
+    if (!row) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    res.json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+adminRouter.use("/sdg-goals", sdgGoalRouter);
+
+// SDG initiatives admin (image upload + SDG tags)
+const initiativeData = (body) => ({
+  title: body.title.trim(),
+  description: body.description || null,
+  link: body.link || null,
+  sort_order: Number(body.sort_order) || 0,
+  is_active: isTrue(body.is_active),
+});
+const sdgInitRouter = Router();
+sdgInitRouter.get("/", async (_req, res, next) => {
+  try {
+    const rows = await sdgInitiativeModel.findAllWithGoals();
+    res.json({ success: true, data: rows });
+  } catch (err) { next(err); }
+});
+sdgInitRouter.post("/", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.body.title?.trim()) { res.status(400).json({ success: false, message: "Title is required" }); return; }
+    const sdgs = parseSdgs(req.body.sdgs);
+    if (sdgs.length === 0) { res.status(400).json({ success: false, message: "Select at least one SDG" }); return; }
+    const data = initiativeData(req.body);
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/sdg");
+      data.image_path = secure_url;
+    }
+    const row = await sdgInitiativeModel.createWithGoals(data, sdgs);
+    res.status(201).json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+sdgInitRouter.put("/:id", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.body.title?.trim()) { res.status(400).json({ success: false, message: "Title is required" }); return; }
+    const sdgs = parseSdgs(req.body.sdgs);
+    if (sdgs.length === 0) { res.status(400).json({ success: false, message: "Select at least one SDG" }); return; }
+    const id = Number(req.params.id);
+    const existing = await sdgInitiativeModel.findById(id);
+    if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    const data = initiativeData(req.body);
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/sdg");
+      data.image_path = secure_url;
+    } else if (req.body.remove_image === "true") {
+      data.image_path = null;
+    }
+    const row = await sdgInitiativeModel.updateWithGoals(id, data, sdgs);
+    if (data.image_path !== undefined) await destroyByUrl(existing.image_path);
+    res.json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+sdgInitRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const existing = await sdgInitiativeModel.findById(Number(req.params.id));
+    if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    await sdgInitiativeModel.delete(existing.id);
+    await destroyByUrl(existing.image_path);
+    res.json({ success: true, message: "Deleted" });
+  } catch (err) { next(err); }
+});
+adminRouter.use("/sdg-initiatives", sdgInitRouter);
+
+// Extension programs admin — programs (with nested activities + SDG tags)
+const programData = (body) => ({
+  title: body.title.trim(),
+  description: body.description || null,
+  sort_order: Number(body.sort_order) || 0,
+  is_active: isTrue(body.is_active),
+});
+const extProgRouter = Router();
+extProgRouter.get("/", async (_req, res, next) => {
+  try {
+    const rows = await extensionProgramModel.findAllWithActivities();
+    res.json({ success: true, data: rows });
+  } catch (err) { next(err); }
+});
+extProgRouter.post("/", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.body.title?.trim()) { res.status(400).json({ success: false, message: "Title is required" }); return; }
+    const data = programData(req.body);
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/extension");
+      data.image_path = secure_url;
+    }
+    const row = await extensionProgramModel.createWithGoals(data, parseSdgs(req.body.sdgs));
+    res.status(201).json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+extProgRouter.put("/:id", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.body.title?.trim()) { res.status(400).json({ success: false, message: "Title is required" }); return; }
+    const id = Number(req.params.id);
+    const existing = await extensionProgramModel.findById(id);
+    if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    const data = programData(req.body);
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/extension");
+      data.image_path = secure_url;
+    } else if (req.body.remove_image === "true") {
+      data.image_path = null;
+    }
+    const row = await extensionProgramModel.updateWithGoals(id, data, parseSdgs(req.body.sdgs));
+    if (data.image_path !== undefined) await destroyByUrl(existing.image_path);
+    res.json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+extProgRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const id = Number(req.params.id);
+    const existing = await extensionProgramModel.findById(id);
+    if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    // Collect activity images before the cascade delete removes their rows
+    const activities = await extensionActivityModel.findAllByProgram(id);
+    await extensionProgramModel.delete(id);
+    await destroyByUrl(existing.image_path);
+    for (const a of activities) {
+      await destroyByUrl(a.image_path);
+    }
+    res.json({ success: true, message: "Deleted" });
+  } catch (err) { next(err); }
+});
+adminRouter.use("/extension-programs", extProgRouter);
+
+const activityData = (body) => ({
+  program_id: Number(body.program_id),
+  title: body.title.trim(),
+  activity_date: body.activity_date || null,
+  location: body.location || null,
+  beneficiaries: body.beneficiaries || null,
+  description: body.description || null,
+  is_active: isTrue(body.is_active),
+});
+const extActRouter = Router();
+extActRouter.post("/", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.body.title?.trim() || !Number(req.body.program_id)) {
+      res.status(400).json({ success: false, message: "Title and program are required" });
+      return;
+    }
+    const data = activityData(req.body);
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/extension");
+      data.image_path = secure_url;
+    }
+    const row = await extensionActivityModel.create(data);
+    res.status(201).json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+extActRouter.put("/:id", imageUpload.single("image"), async (req, res, next) => {
+  try {
+    if (!req.body.title?.trim() || !Number(req.body.program_id)) {
+      res.status(400).json({ success: false, message: "Title and program are required" });
+      return;
+    }
+    const id = Number(req.params.id);
+    const existing = await extensionActivityModel.findById(id);
+    if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    const data = activityData(req.body);
+    if (req.file) {
+      const { secure_url } = await uploadBuffer(req.file.buffer, "pdm/extension");
+      data.image_path = secure_url;
+    } else if (req.body.remove_image === "true") {
+      data.image_path = null;
+    }
+    const row = await extensionActivityModel.update(id, data);
+    if (data.image_path !== undefined) await destroyByUrl(existing.image_path);
+    res.json({ success: true, data: row });
+  } catch (err) { next(err); }
+});
+extActRouter.delete("/:id", async (req, res, next) => {
+  try {
+    const existing = await extensionActivityModel.findById(Number(req.params.id));
+    if (!existing) { res.status(404).json({ success: false, message: "Not found" }); return; }
+    await extensionActivityModel.delete(existing.id);
+    await destroyByUrl(existing.image_path);
+    res.json({ success: true, message: "Deleted" });
+  } catch (err) { next(err); }
+});
+adminRouter.use("/extension-activities", extActRouter);
 
 router.use("/admin", adminRouter);
 

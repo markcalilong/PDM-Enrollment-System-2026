@@ -324,6 +324,8 @@ export function LandingPage() {
             <a href="#announcements" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-primary-600 transition">Announcements</a>
             <a href="#programs" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-primary-600 transition">Programs</a>
             <Link to="/school-officials" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-primary-600 transition">School Officials</Link>
+            <Link to="/extension" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-primary-600 transition">Extension</Link>
+            <Link to="/sdg" className="hidden sm:inline-flex text-sm font-medium text-gray-600 hover:text-primary-600 transition">SDG</Link>
             <Link
               to="/login"
               className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 transition"
