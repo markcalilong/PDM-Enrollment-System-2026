@@ -40,6 +40,8 @@ import {
   HiOutlineStar,
   HiOutlinePhoto,
   HiOutlineQuestionMarkCircle,
+  HiOutlineHeart,
+  HiOutlineGlobeAlt,
 } from "react-icons/hi2";
 
 interface NavItem {
@@ -123,6 +125,8 @@ const navGroups: NavGroup[] = [
       { to: "/utilities/highlights", label: "Highlights", icon: <HiOutlineSparkles className="h-4.5 w-4.5" /> },
       { to: "/utilities/faqs", label: "FAQs", icon: <HiOutlineQuestionMarkCircle className="h-4.5 w-4.5" /> },
       { to: "/utilities/school-officials", label: "School Officials", icon: <HiOutlineUserGroup className="h-4.5 w-4.5" /> },
+      { to: "/utilities/extension", label: "Extension", icon: <HiOutlineHeart className="h-4.5 w-4.5" /> },
+      { to: "/utilities/sdg", label: "SDG", icon: <HiOutlineGlobeAlt className="h-4.5 w-4.5" /> },
       { to: "/utilities/course-offerings", label: "Course Offerings", icon: <HiOutlineStar className="h-4.5 w-4.5" /> },
     ],
   },

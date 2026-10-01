@@ -45,6 +45,10 @@ const advisingController = {
         res.status(409).json({ success: false, message: "Advising already exists for this student/semester" });
         return;
       }
+      if (err.message?.includes("Prerequisite not met")) {
+        res.status(422).json({ success: false, message: err.message });
+        return;
+      }
       next(err);
     }
   },
@@ -54,7 +58,13 @@ const advisingController = {
       await advisingModel.updateSubjects(Number(req.params.id), req.body.subject_ids || []);
       const full = await advisingModel.findByIdWithSubjects(Number(req.params.id));
       res.json({ success: true, data: full });
-    } catch (err) { next(err); }
+    } catch (err) {
+      if (err.message?.includes("Prerequisite not met")) {
+        res.status(422).json({ success: false, message: err.message });
+        return;
+      }
+      next(err);
+    }
   },
 
   async approve(req, res, next) {

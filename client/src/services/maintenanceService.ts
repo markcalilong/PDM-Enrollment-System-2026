@@ -142,6 +142,24 @@ export const sectioningService = {
   getClassList: (sectionId: number) => api.get<any>(`/transactions/sectioning/class-list/${sectionId}`),
 };
 
+export const gradeService = {
+  getSections: (semesterId?: number, schoolYearId?: number) => {
+    const params = new URLSearchParams();
+    if (semesterId) params.set("semester_id", String(semesterId));
+    if (schoolYearId) params.set("school_year_id", String(schoolYearId));
+    return api.get<any[]>(`/transactions/grades/sections?${params}`);
+  },
+  getSubjectsForSection: (sectionId: number) =>
+    api.get<any[]>(`/transactions/grades/section/${sectionId}/subjects`),
+  getClassGrades: (sectionId: number, subjectId: number) =>
+    api.get<any>(`/transactions/grades/section/${sectionId}/subject/${subjectId}`),
+  getStudents: () => api.get<any[]>("/transactions/grades/students"),
+  getStudentGrades: (studentId: number) => api.get<any>(`/transactions/grades/student/${studentId}`),
+  save: (entries: any[]) => api.post<any>("/transactions/grades", { entries }),
+  completeInc: (id: number, rawScore: number) =>
+    api.patch<any>(`/transactions/grades/${id}/complete`, { raw_score: rawScore }),
+};
+
 // ─── Landing Page (Admin CRUD) ──────────────────────────
 export const heroSlideService = {
   getAll: () => api.get<any[]>("/landing/admin/hero-slides"),
@@ -245,6 +263,45 @@ export const officialService = {
     return data;
   },
   remove: (id: number) => api.delete(`/landing/admin/officials/${id}`),
+};
+
+// Shared multipart sender for the image-bearing landing-page admin endpoints
+async function sendForm(path: string, method: "POST" | "PUT", formData: FormData) {
+  const token = localStorage.getItem("token");
+  const res = await fetch(`${API_BASE}${path}`, {
+    method,
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    body: formData,
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message || `Failed to ${method === "POST" ? "create" : "update"}`);
+  return data;
+}
+
+export const sdgGoalService = {
+  getAll: () => api.get<any[]>("/landing/admin/sdg-goals"),
+  update: (number: number, data: { description: string | null }) =>
+    api.put<any>(`/landing/admin/sdg-goals/${number}`, data),
+};
+
+export const sdgInitiativeService = {
+  getAll: () => api.get<any[]>("/landing/admin/sdg-initiatives"),
+  create: (formData: FormData) => sendForm("/landing/admin/sdg-initiatives", "POST", formData),
+  update: (id: number, formData: FormData) => sendForm(`/landing/admin/sdg-initiatives/${id}`, "PUT", formData),
+  remove: (id: number) => api.delete(`/landing/admin/sdg-initiatives/${id}`),
+};
+
+export const extensionProgramService = {
+  getAll: () => api.get<any[]>("/landing/admin/extension-programs"),
+  create: (formData: FormData) => sendForm("/landing/admin/extension-programs", "POST", formData),
+  update: (id: number, formData: FormData) => sendForm(`/landing/admin/extension-programs/${id}`, "PUT", formData),
+  remove: (id: number) => api.delete(`/landing/admin/extension-programs/${id}`),
+};
+
+export const extensionActivityService = {
+  create: (formData: FormData) => sendForm("/landing/admin/extension-activities", "POST", formData),
+  update: (id: number, formData: FormData) => sendForm(`/landing/admin/extension-activities/${id}`, "PUT", formData),
+  remove: (id: number) => api.delete(`/landing/admin/extension-activities/${id}`),
 };
 
 export const courseOfferingService = {

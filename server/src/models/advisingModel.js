@@ -1,4 +1,5 @@
 const { db } = require("../config/database");
+const { gradeModel } = require("./gradeModel");
 
 const advisingModel = {
   // Get all advising records with student + semester info
@@ -90,14 +91,52 @@ const advisingModel = {
       prereqMap[p.subject_id].push({ id: p.prereq_id, code: p.prereq_code });
     }
 
-    return subjects.map((s) => ({
-      ...s,
-      prerequisites: prereqMap[s.id] || [],
-    }));
+    // A subject is eligible only if the student has passed ALL its prerequisites.
+    // INC grades are expired-to-Failed inside getPassedSubjectIds first.
+    const passed = await gradeModel.getPassedSubjectIds(studentId);
+
+    return subjects.map((s) => {
+      const prerequisites = prereqMap[s.id] || [];
+      const blockedBy = prerequisites.filter((p) => !passed.has(p.id));
+      return {
+        ...s,
+        prerequisites,
+        eligible: blockedBy.length === 0,
+        blocked_by: blockedBy,
+      };
+    });
+  },
+
+  // Throw if the student has not passed the prerequisites of any subject in the list.
+  async assertPrerequisitesMet(studentId, subjectIds) {
+    if (!subjectIds || subjectIds.length === 0) return;
+
+    const prereqs = await db("subject_prerequisites as sp")
+      .join("subjects as sub", "sub.id", "sp.subject_id")
+      .join("subjects as ps", "ps.id", "sp.prerequisite_id")
+      .whereIn("sp.subject_id", subjectIds)
+      .select("sp.subject_id", "sub.code as subject_code", "ps.id as prereq_id", "ps.code as prereq_code");
+
+    if (prereqs.length === 0) return;
+
+    const passed = await gradeModel.getPassedSubjectIds(studentId);
+    const violations = [];
+    for (const p of prereqs) {
+      if (!passed.has(p.prereq_id)) {
+        violations.push(`${p.subject_code} requires ${p.prereq_code} (not yet passed)`);
+      }
+    }
+    if (violations.length > 0) {
+      throw new Error(`Prerequisite not met: ${violations.join("; ")}`);
+    }
   },
 
   // Create advising with subjects
   async create(data) {
+    const { subject_ids } = data;
+    if (data.student_id) {
+      await this.assertPrerequisitesMet(data.student_id, subject_ids || []);
+    }
     return db.transaction(async (trx) => {
       const { subject_ids, ...header } = data;
 
@@ -119,6 +158,10 @@ const advisingModel = {
 
   // Update subjects in an advising record
   async updateSubjects(advisingId, subjectIds) {
+    const advising = await db("advising").where({ id: advisingId }).first();
+    if (advising) {
+      await this.assertPrerequisitesMet(advising.student_id, subjectIds);
+    }
     return db.transaction(async (trx) => {
       await trx("advising_subjects").where({ advising_id: advisingId }).del();
       if (subjectIds.length > 0) {
